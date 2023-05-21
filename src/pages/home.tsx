@@ -71,6 +71,16 @@ const Home = () => {
             AI PR Description
           </button>
 
+          <button
+            className="flex items-center bg-slate-700 hover:bg-slate-700/70 hover:text-orange text-white gap-2 p-1.5 px-3 w-full rounded-sm font-medium text-sm"
+            onClick={() => {
+              setCurrentPage("postonhighlight");
+            }}
+          >
+            <HiPencil />
+            Post On Highlights
+          </button>
+
           {currentTabIsOpensaucedUser && (
             <button
               className="flex items-center bg-slate-700 hover:bg-slate-700/70 hover:text-orange text-white gap-2 p-1.5 px-3 w-full rounded-sm font-medium text-sm"
@@ -81,9 +91,9 @@ const Home = () => {
               <HiUserCircle />
               View
 
-{" "}
+              {" "}
 
-{checkedUser}
+              {checkedUser}
               &apos;s profile
             </button>
           )}
