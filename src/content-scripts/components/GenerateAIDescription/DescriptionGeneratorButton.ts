@@ -14,14 +14,52 @@ export const DescriptionGeneratorButton = () => {
     <img class="octicon octicon-heading" height="16px" width="16px" id="ai-description-button-logo" src=${chrome.runtime.getURL(openSaucedLogoIcon)}>
     </span>
     <tool-tip for="ai-description-gen">Generate PR description</tool-tip>`,
-    onclick: handleSubmit,
+    onclick: handleAiDescriptionButtonClick,
 
   });
 
   return descriptionGeneratorButton;
 };
 
-const handleSubmit = async () => {
+export const getAiDescription = async () => {
+  const url = getPullRequestAPIURL(window.location.href);
+  const descriptionConfig = await getAIDescriptionConfig();
+
+  if (!descriptionConfig) {
+    throw new Error("Configuration file is empty!");
+  }
+
+  if (!descriptionConfig.enabled) {
+    throw new Error("AI PR description is disabled!");
+  }
+
+  const [diff, commitMessages] = await getDescriptionContext(url, descriptionConfig.config.source);
+
+  if (!diff && !commitMessages) {
+    throw new Error(`No input context was generated.`);
+  }
+  if (isOutOfContextBounds([diff, commitMessages], descriptionConfig.config.maxInputLength)) {
+    throw new Error(`Max input length exceeded. Try setting the description source to commit-messages.`);
+  }
+  const token = await getAuthToken();
+  const descriptionStream = await generateDescription(
+    token,
+    descriptionConfig.config.language,
+    descriptionConfig.config.length,
+    descriptionConfig.config.temperature / 10,
+    descriptionConfig.config.tone,
+    diff,
+    commitMessages,
+  );
+
+  if (!descriptionStream) {
+    throw new Error("No description was generated!");
+  }
+
+  return descriptionStream;
+};
+
+export const handleAiDescriptionButtonClick = async () => {
   try {
     if (!(await isLoggedIn())) {
       return window.open(SUPABASE_LOGIN_URL, "_blank");
@@ -35,16 +73,17 @@ const handleSubmit = async () => {
     const descriptionConfig = await getAIDescriptionConfig();
 
     if (!descriptionConfig) {
- return;
-}
+      return;
+    }
     if (!descriptionConfig.enabled) {
- return alert("AI PR description is disabled!");
-}
+      return alert("AI PR description is disabled!");
+    }
     logo.classList.toggle("animate-spin");
     const [diff, commitMessages] = await getDescriptionContext(url, descriptionConfig.config.source);
-    if(!diff && !commitMessages) {
+
+    if (!diff && !commitMessages) {
       logo.classList.toggle("animate-spin");
-      return alert(`No input context was generated.`)
+      return alert(`No input context was generated.`);
     }
     if (isOutOfContextBounds([diff, commitMessages], descriptionConfig.config.maxInputLength)) {
       logo.classList.toggle("animate-spin");
@@ -70,7 +109,7 @@ const handleSubmit = async () => {
     void insertTextAtCursor(textArea, descriptionStream);
   } catch (error: unknown) {
     if (error instanceof Error) {
- console.error("Description generation error:", error.message);
-}
+      console.error("Description generation error:", error.message);
+    }
   }
 };
